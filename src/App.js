@@ -1,98 +1,61 @@
-import { useEffect, useRef, useState } from 'react';
-import { Block } from './Block';
+import React, { useEffect, useState } from 'react';
 import './index.scss';
+import { Success } from './components/Success';
+import { Users } from './components/Users';
+
+// Тут список пользователей: cc
 
 function App() {
-  const [fromCurrency, setFromCurrency] = useState('RUB');
-  const [toCurrency, setToCurrency] = useState('USD');
-  const [fromPrice, setFromPrice] = useState(0);
-  const [toPrice, setToPrice] = useState(1);
-  // const [rates, setRates] = useState({});
-  const ratesRef = useRef({});
+  const [users, setUsers] = useState([]);
+  const [invites, setInvites] = useState([]);
+  const [isLoading, setLoading] = useState(true);
+  const [success, setSuccess] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
 
   useEffect(() => {
-    fetch('https://www.cbr-xml-daily.ru/latest.js')
+    fetch('https://reqres.in/api/users')
       .then((res) => res.json())
       .then((json) => {
-        // setRates(json.rates);
-        ratesRef.current = json.rates;
-        onChangeToPrice(1);
+        setUsers(json.data);
       })
       .catch((err) => {
         console.warn(err);
-        alert('Не удалось получить информацию');
-      });
+        alert('Ошибка при получении пользователей');
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  //Вычесление валюты относительно левого поля
-  const onChangeFromPrice = (value) => {
-    const price = () => {
-      if (fromCurrency === 'RUB') {
-        return value;
-      }
-      return value / ratesRef.current[fromCurrency];
-    };
-
-    const result = () => {
-      if (toCurrency === 'RUB' && fromCurrency === 'RUB') {
-        return value;
-      }
-      if (toCurrency === 'RUB') {
-        return (value / ratesRef.current[fromCurrency]).toFixed(3);
-      }
-      return (price() * ratesRef.current[toCurrency]).toFixed(3);
-    };
-
-    setFromPrice(value);
-    setToPrice(result());
+  const onChangeSearchValue = (event) => {
+    setSearchValue(event.target.value);
   };
 
-  //Вычисление валюты относительно правого поля
-  const onChangeToPrice = (value) => {
-    console.log(value);
-    const price1 = () => {
-      if (toCurrency === 'RUB') {
-        return value;
-      }
-      return value / ratesRef.current[toCurrency];
-    };
-
-    const result = () => {
-      if (toCurrency === 'RUB' && fromCurrency === 'RUB') {
-        return value;
-      }
-      if (fromCurrency === 'RUB') {
-        return (value / ratesRef.current[toCurrency]).toFixed(3);
-      }
-      return (price1() * ratesRef.current[fromCurrency]).toFixed(3);
-    };
-
-    setFromPrice(result());
-    setToPrice(value);
+  const onClickInvite = (id) => {
+    if (invites.includes(id)) {
+      setInvites((prev) => prev.filter((_id) => _id !== id)); //Если есть, то исключи из массива
+    } else {
+      setInvites((prev) => [...prev, id]); //Если нет, то добавь
+    }
   };
 
-  useEffect(() => {
-    onChangeToPrice(toPrice);
-  }, [fromCurrency]);
-
-  useEffect(() => {
-    onChangeFromPrice(fromPrice);
-  }, [toCurrency]);
+  const onClickSendInvites = () => {
+    setSuccess(true);
+  };
 
   return (
     <div className="App">
-      <Block
-        value={fromPrice}
-        currency={fromCurrency}
-        onChangeCurrency={setFromCurrency}
-        onChangeValue={onChangeFromPrice}
-      />
-      <Block
-        value={toPrice}
-        currency={toCurrency}
-        onChangeCurrency={setToCurrency}
-        onChangeValue={onChangeToPrice}
-      />
+      {success ? (
+        <Success count={invites.length} />
+      ) : (
+        <Users
+          onChangeSearchValue={onChangeSearchValue}
+          searchValue={searchValue}
+          items={users}
+          isLoading={isLoading}
+          invites={invites}
+          onClickInvite={onClickInvite}
+          onClickSendInvites={onClickSendInvites}
+        />
+      )}
     </div>
   );
 }
